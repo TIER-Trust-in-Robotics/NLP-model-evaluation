@@ -12,7 +12,8 @@
 - [CMU-MOSEI](http://multicomp.cs.cmu.edu/resources/cmu-mosei-dataset/) (pending) 
 - [DailyDialog](https://huggingface.co/datasets/frankdarkluo/DailyDialog)
 - [GoEmotion](https://huggingface.co/datasets/google-research-datasets/go_emotions)
-- [Stanford Sentiment Treebank-2 (SST-2)](https://huggingface.co/datasets/stanfordnlp/sst2)
+- [Stanford Sentiment Treebank-2](https://huggingface.co/datasets/stanfordnlp/sst2)
+- [IEMOCAP](https://sail.usc.edu/iemocap/)
 
 ### Dataset evaluation
 - [distilBERT](https://huggingface.co/distilbert/distilbert-base-uncased)
