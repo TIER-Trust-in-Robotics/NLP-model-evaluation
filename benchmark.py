@@ -30,8 +30,8 @@ MODEL_REGISTRY = {
     "distilbert": "distilbert-base-uncased",
     "tinybert": "huawei-noah/TinyBERT_General_4L_312D",
     "bertmini": "rajjwal1/bert-mini",
-    "minilm": "microsoft/MiniLM-L12-H384-uncased",
-    "minilm_l6": "nreimers/MiniLM-L6-H384-uncased",
+    "minilm": "microsoft/MiniLM-L12-H384-uncased",  # alt: microsoft/Multilingual-MiniLM-L12-H384
+    "minilm_l6": "nreimers/MiniLM-L6-H384-uncased",  # optimized, faster, but slightly less accurate
 }
 
 DATASET_REGISTRY = {
