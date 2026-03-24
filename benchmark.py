@@ -1,5 +1,6 @@
 import argparse
 import json
+import h5py
 import os
 import numpy as np
 from pathlib import Path
@@ -27,7 +28,7 @@ from sklearn.metrics import (
 
 
 MODEL_REGISTRY = {
-    "distilbert": "distilbert-base-uncased",
+    "distilbert": "distilbert/distilbert-base-uncased",
     "tinybert": "huawei-noah/TinyBERT_General_4L_312D",
     "bertmini": "rajjwal1/bert-mini",
     "minilm": "microsoft/MiniLM-L12-H384-uncased",  # alt: microsoft/Multilingual-MiniLM-L12-H384
@@ -36,7 +37,7 @@ MODEL_REGISTRY = {
 
 DATASET_REGISTRY = {
     "dailydialog": "roskoN/dailydialog",
-    "goemtion": "google-research-datasets/go_emotions",
+    "goemotion": "google-research-datasets/go_emotions",
     "sst2": "stanfordnlp/sst2",
 }
 
@@ -206,7 +207,7 @@ def tokenize(ds, tokenizer, max_len: int):
         )
 
     ds = ds.map(_tok, batched=True)
-    ds.set_format("torch", columsn=["input_ids", "attention_mask", "label"])
+    ds.set_format("torch", columns=["input_ids", "attention_mask", "label"])
 
     return ds
 
@@ -225,7 +226,7 @@ def run_benchmark(
     epochs: int = 3,
     batch_size: int = 32,
     learning_rate: float = 2e-5,
-    warmup_ratio: float = 0.1,
+    warmup_ratio: float = 0.1,  # depeciated, used warmup_steps
     weight_decay: float = 0.01,
     patience: int = 2,
 ) -> BenchmarkResults:
@@ -234,9 +235,11 @@ def run_benchmark(
     print(f"{'=' * 50}")
 
     # --- Dataset ---
+    #
     print("Getting dataset...")
     train_ds, eval_ds, num_labels, label_names = LOADER_REGISTRY[dataset_name]()
-    print("Done")
+    print(f"Done. \n Labels: {num_labels} \n Label names: {label_names}")
+    print(f"{'=' * 50}")
 
     # --- Model + Tokenizer ---
     hf_model_id = MODEL_REGISTRY[model_name]
@@ -254,16 +257,14 @@ def run_benchmark(
     run_dir = OUTPUT_DIR / f"{model_name}_{dataset_name}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # use_cpu = device == "cpu"
-    # use_mps = device == "mps"
-
     training_args = TrainingArguments(
         output_dir=str(run_dir),
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size * 2,
         learning_rate=learning_rate,
-        warmup_ratio=warmup_ratio,
+        # warmup_ratio=warmup_ratio,
+        warmup_steps=int(len(train_ds * warmup_ratio)),
         weight_decay=weight_decay,
         eval_strategy="epoch",
         save_strategy="epoch",
@@ -274,6 +275,7 @@ def run_benchmark(
         save_total_limit=1,
         report_to="none",
         # fp16=(device == "cuda"),  # cuda is the only on that supports fp16
+        use_cpu=(device == "cpu"),
         dataloader_num_workers=0,
         disable_tqdm=False,
     )
@@ -352,10 +354,6 @@ def main():
 
     except Exception as e:
         print(f"Error running {args.model} on {args.dataset} with error: {e}")
-
-    # if result:
-    #     out_path = Path(args.output)
-    #     print(f"Results saved to: {out_path}")
 
     else:
         print("No report created.")
