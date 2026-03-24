@@ -52,12 +52,12 @@ def load_DailyDialog():
     """
     Labels:
     ------------
-    0 | no_emtion
+    0 | no_emotion
     1 | anger
     2 | disgust
     3 | fear
     4 | happiness
-    5 | saddness
+    5 | sadness
     6 | surprise
 
     Datapoints in this datasets are conversations
@@ -103,16 +103,16 @@ def load_DailyDialog():
 
 def load_GoEmotion():
     """
-    Dataset with 28 emotion labels in four catogires:
+    Dataset with 28 emotion labels in four categories:
 
     -------------------------------------------------------------
     Positive | Admiration, Amusement, Approval, Caring, Excitement,
              | Gratitude, Joy, Love, Optimism, Pride, Relief
     -------------------------------------------------------------
-    Negative | Anger, Annoyance, Dissappointment, Disapproval, Digust,
-             | Embarrassment, Fear, Grief, Nerviousness, Remorese, Sadness
+    Negative | Anger, Annoyance, Disappointment, Disapproval, Disgust,
+             | Embarrassment, Fear, Grief, Nervousness, Remorse, Sadness
     -------------------------------------------------------------
-    Ambigous | Confusion, Curiosity, Desire, Relaizaiton, Surpise, Netural
+    Ambiguous | Confusion, Curiosity, Desire, Realization, Surprise, Neutral
     -------------------------------------------------------------
     """
     ds = load_dataset(DATASET_REGISTRY["goemotion"])
@@ -161,7 +161,7 @@ def compute_metrics(eval_pred):
             labels,
             pred,
             average="weighted",
-            zero_devision=0,
+            zero_division=0,
         ),
         "macro_f1": f1_score(
             labels,
@@ -193,7 +193,7 @@ class BenchmarkResults:
     accuracy: float
     weighted_f1: float
     macro_f1: float
-    macro_precion: float
+    macro_precision: float
     macro_recall: float
     num_train_samples: int
     num_test_samples: int
@@ -203,7 +203,7 @@ class BenchmarkResults:
 def tokenize(ds, tokenizer, max_len: int):
     def _tok(batch):
         return tokenizer(
-            batch["text"], truncate=True, padding="max_length", max_length=max_len
+            batch["text"], truncation=True, padding="max_length", max_length=max_len
         )
 
     ds = ds.map(_tok, batched=True)
@@ -226,7 +226,7 @@ def run_benchmark(
     epochs: int = 3,
     batch_size: int = 32,
     learning_rate: float = 2e-5,
-    warmup_ratio: float = 0.1,  # depeciated, used warmup_steps
+    warmup_ratio: float = 0.1,  # deprecated, used warmup_steps
     weight_decay: float = 0.01,
     patience: int = 2,
 ) -> BenchmarkResults:
@@ -264,7 +264,7 @@ def run_benchmark(
         per_device_eval_batch_size=batch_size * 2,
         learning_rate=learning_rate,
         # warmup_ratio=warmup_ratio,
-        warmup_steps=int(len(train_ds * warmup_ratio)),
+        warmup_steps=int(len(train_ds) * warmup_ratio),
         weight_decay=weight_decay,
         eval_strategy="epoch",
         save_strategy="epoch",
@@ -291,7 +291,7 @@ def run_benchmark(
 
     print("Training...")
     trainer.train()
-    print("Finsihed Training")
+    print("Finished Training")
 
     # --- Eval ----
 
@@ -299,8 +299,8 @@ def run_benchmark(
 
     # --- Per-class ---
     preds_out = trainer.predict(eval_ds)
-    preds = np.argmax(preds_out.prediction, axis=-1)
-    labels = preds_out.labels_ids
+    preds = np.argmax(preds_out.predictions, axis=-1)
+    labels = preds_out.label_ids
     report = classification_report(
         labels, preds, zero_division=0, target_names=label_names
     )
