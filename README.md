@@ -25,3 +25,8 @@
 
 #### Metrics
 Weighed F1, macro f1, inference latency, macro recall, macro precision, model-size, and per-class performance. These are to be tested on CPU and CUDA (Jetson Orin nano Super 8GB).
+
+# TO DO:
+- [ ] Allow benchmark.py to queue multiple datasets.
+- [ ] Run benchmark on a standard device (Jetson Orin Nano or similar edge device).
+- [ ] Write comparing all models across all datasets.
