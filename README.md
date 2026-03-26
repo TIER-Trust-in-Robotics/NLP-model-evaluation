@@ -9,7 +9,7 @@
 # NLP models to be tested
 
 ## Datasets to use
-- [CMU-MOSEI](http://multicomp.cs.cmu.edu/resources/cmu-mosei-dataset/) (pending) 
+- [CMU-MOSEI](http://multicomp.cs.cmu.edu/resources/cmu-mosei-dataset/) 
 - [DailyDialog](https://huggingface.co/datasets/frankdarkluo/DailyDialog)
 - [GoEmotion](https://huggingface.co/datasets/google-research-datasets/go_emotions)
 - [Stanford Sentiment Treebank-2](https://huggingface.co/datasets/stanfordnlp/sst2)
