@@ -1,11 +1,12 @@
 import argparse
+import argcomplete
 import json
 import h5py
 import os
 import numpy as np
 from pathlib import Path
 from datasets import load_dataset, Dataset
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -13,6 +14,7 @@ from transformers import (
     Trainer,
     EarlyStoppingCallback,
 )
+from to_ds import load_iemocap, load_msp_podcast
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -39,6 +41,8 @@ DATASET_REGISTRY = {
     "dailydialog": "roskoN/dailydialog",
     "goemotion": "google-research-datasets/go_emotions",
     "sst2": "stanfordnlp/sst2",
+    "iemocap": "IEMOCAP",
+    "msp_podcast": "MSP-PODCAST",
 }
 
 OUTPUT_DIR = Path("./benchmark_results")
@@ -51,7 +55,7 @@ OUTPUT_DIR = Path("./benchmark_results")
 def load_DailyDialog():
     """
     Labels:
-    ------------
+    --------------
     0 | no_emotion
     1 | anger
     2 | disgust
@@ -106,22 +110,55 @@ def load_GoEmotion():
     Dataset with 28 emotion labels in four categories:
 
     -------------------------------------------------------------
-    Positive | Admiration, Amusement, Approval, Caring, Excitement,
-             | Gratitude, Joy, Love, Optimism, Pride, Relief
+    Positive  | Admiration, Amusement, Approval, Caring, Excitement,
+              | Gratitude, Joy, Love, Optimism, Pride, Relief
     -------------------------------------------------------------
-    Negative | Anger, Annoyance, Disappointment, Disapproval, Disgust,
-             | Embarrassment, Fear, Grief, Nervousness, Remorse, Sadness
+    Negative  | Anger, Annoyance, Disappointment, Disapproval, Disgust,
+              | Embarrassment, Fear, Grief, Nervousness, Remorse, Sadness
     -------------------------------------------------------------
-    Ambiguous | Confusion, Curiosity, Desire, Realization, Surprise, Neutral
+    Ambiguous | Confusion, Curiosity, Desire, Realization, Surprise
+    -------------------------------------------------------------
+    Neutral   | Neutral
     -------------------------------------------------------------
     """
     ds = load_dataset(DATASET_REGISTRY["goemotion"])
 
     def flatten(example):
+        # onlt taking the first label (the one with coresponding smal)
         example["label"] = example["label"][0]
         return example
 
     ds = ds.map(flatten, remove_columns=["labels"])
+
+    label_names = [
+        "admiration",
+        "amusement",
+        "anger",
+        "annoyance",
+        "approvalcaring",
+        "confusion",
+        "curiosity",
+        "desire",
+        "disappointment",
+        "disapproval",
+        "disgust",
+        "embarrassment",
+        "excitement",
+        "fear",
+        "gratitude",
+        "grief",
+        "joy",
+        "love",
+        "nervousness",
+        "optimism",
+        "pride",
+        "realization",
+        "relief",
+        "remorse",
+        "sadness",
+        "surprise",
+        "neutral",
+    ]
 
 
 def load_sst2():
@@ -141,6 +178,8 @@ LOADER_REGISTRY = {
     "dailydialog": load_DailyDialog,
     "sst2": load_sst2,
     "goemotions": load_GoEmotion,
+    "iemocap": load_iemocap,
+    "msp_podcast": load_msp_podcast,
 }
 
 # -------------------------
@@ -221,12 +260,12 @@ def run_benchmark(
     model_name: str,
     dataset_name: str,
     device: str,
-    finetune: bool = True,  # only turn off when importing a saved fine tune model
-    max_length: int = 128,  # the max length of a text input.
+    finetune: bool = True,  # only turn too False when importing a saved fine tune model
+    max_length: int = 128,  # the max length of a text input (empty space is padded)
     epochs: int = 3,
     batch_size: int = 32,
     learning_rate: float = 2e-5,
-    warmup_ratio: float = 0.1,  # deprecated, used warmup_steps
+    warmup_ratio: float = 0.1,  # deprecated, used in warmup_steps
     weight_decay: float = 0.01,
     patience: int = 2,
 ) -> BenchmarkResults:
@@ -235,7 +274,7 @@ def run_benchmark(
     print(f"{'=' * 50}")
 
     # --- Dataset ---
-    #
+
     print("Getting dataset...")
     train_ds, eval_ds, num_labels, label_names = LOADER_REGISTRY[dataset_name]()
     print(f"Done. \n Labels: {num_labels} \n Label names: {label_names}")
@@ -322,7 +361,26 @@ def run_benchmark(
     )
 
     _print_result(result)
+    save_result(result, run_dir / "results.json")
     return result
+
+
+def save_result(result: BenchmarkResults, path: str | Path):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    existing = []
+    if path.exists():
+        with open(path) as f:
+            data = json.load(f)
+            existing = data if isinstance(data, list) else [data]
+
+    existing.append(asdict(result))
+
+    with open(path, "w") as f:
+        json.dump(existing, f, indent=2)
+
+    print(f"Results saved to {path}")
 
 
 def _print_result(r: BenchmarkResults):
@@ -332,31 +390,35 @@ def _print_result(r: BenchmarkResults):
     print(f"  Macro F1         : {r.macro_f1:.4f}")
     print(f"  Macro Precision  : {r.macro_precision:.4f}")
     print(f"  Macro Recall     : {r.macro_recall:.4f}")
-    print(f"  Per-class report:\n{r.per_class_report}")
+    print(f"  Per-class report: {r.per_class_report}")
 
 
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model", choices=list(MODEL_REGISTRY.keys()))
-    parser.add_argument("--dataset", choices=list(DATASET_REGISTRY.keys()))
+    parser.add_argument("--datasets", nargs="+", choices=list(DATASET_REGISTRY.keys()))
     parser.add_argument("--finetune", default=True)
     parser.add_argument("--device", choices=["cpu", "cuda", "mps"])
     parser.add_argument("--output", default=os.path.join(OUTPUT_DIR, "results.json"))
+    # argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    try:
-        result = run_benchmark(
-            model_name=args.model, dataset_name=args.dataset, device=args.device
-        )
+    # results = [BenchmarkResults]
+    for ds in args.datasets:
+        print(f"  Running {args.model} on {ds}...")
 
-    except Exception as e:
-        print(f"Error running {args.model} on {args.dataset} with error: {e}")
+        try:
+            result = run_benchmark(
+                model_name=args.model, dataset_name=ds, device=args.device
+            )
 
-    else:
-        print("No report created.")
+        except Exception as e:
+            print(f"Error running {args.model} on {args.dataset} with error: {e}")
+
+        save_result(result, args.output)
 
 
 if __name__ == "__main__":
