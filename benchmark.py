@@ -135,7 +135,8 @@ def load_GoEmotion():
         "amusement",
         "anger",
         "annoyance",
-        "approvalcaring",
+        "approval",
+        "caring",
         "confusion",
         "curiosity",
         "desire",
@@ -177,7 +178,6 @@ def load_sst2():
 LOADER_REGISTRY = {
     "dailydialog": load_DailyDialog,
     "sst2": load_sst2,
-    "goemotions": load_GoEmotion,
     "iemocap": load_iemocap,
     "msp_podcast": load_msp_podcast,
 }
@@ -293,44 +293,47 @@ def run_benchmark(
 
     # --- Fine Tuning ---
 
-    run_dir = OUTPUT_DIR / f"{model_name}_{dataset_name}"
-    run_dir.mkdir(parents=True, exist_ok=True)
+    if finetune:
+        run_dir = OUTPUT_DIR / f"{model_name}_{dataset_name}"
+        run_dir.mkdir(parents=True, exist_ok=True)
 
-    training_args = TrainingArguments(
-        output_dir=str(run_dir),
-        num_train_epochs=epochs,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size * 2,
-        learning_rate=learning_rate,
-        # warmup_ratio=warmup_ratio,
-        warmup_steps=int(len(train_ds) * warmup_ratio),
-        weight_decay=weight_decay,
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        logging_strategy="epoch",
-        load_best_model_at_end=True,
-        metric_for_best_model="macro_f1",
-        greater_is_better=True,
-        save_total_limit=1,
-        report_to="none",
-        # fp16=(device == "cuda"),  # cuda is the only on that supports fp16
-        use_cpu=(device == "cpu"),
-        dataloader_num_workers=0,
-        disable_tqdm=False,
-    )
+        training_args = TrainingArguments(
+            output_dir=str(run_dir),
+            num_train_epochs=epochs,
+            per_device_train_batch_size=batch_size,
+            per_device_eval_batch_size=batch_size * 2,
+            learning_rate=learning_rate,
+            # warmup_ratio=warmup_ratio,
+            warmup_steps=int(len(train_ds) * warmup_ratio),
+            weight_decay=weight_decay,
+            eval_strategy="epoch",
+            save_strategy="epoch",
+            logging_strategy="epoch",
+            load_best_model_at_end=True,
+            metric_for_best_model="macro_f1",
+            greater_is_better=True,
+            save_total_limit=1,
+            report_to="none",
+            # fp16=(device == "cuda"),  # cuda is the only on that supports fp16
+            use_cpu=(device == "cpu"),
+            dataloader_num_workers=0,
+            disable_tqdm=False,
+        )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=patience)],
-    )
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            compute_metrics=compute_metrics,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=patience)],
+        )
 
-    print("Training...")
-    trainer.train()
-    print("Finished Training")
+        print("Training...")
+        trainer.train()
+        print("Finished Training")
+    else:
+        exit
 
     # --- Eval ----
 
