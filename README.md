@@ -37,3 +37,5 @@ RandomForestClassifier with shallow trees
 MLP
 LSTM/GRU
 ```
+## Loading data
+The `loader.py` file requires that you put all the .npz (found in the google drive) in a dir called /data (or put it in the same dir if you want).
