@@ -13,7 +13,7 @@ neutral_skip_rate = fraction of neutral utterances skipped
 ```
 
 Pick the threshold that gives the best `neutral_skip_rate` while keeping
-`non_neutral_recall` at or above the target, initially `0.95`.
+`non_neutral_recall` at above 90%
 
 Also report:
 
