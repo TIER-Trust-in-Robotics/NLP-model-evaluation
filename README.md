@@ -1,4 +1,22 @@
-#### Metrics
+## Goal
+
+Train a binary gate on IEMOCAP prosodic features:
+
+```text
+neutral     -> skip transcription/NLP when confidence is high
+non-neutral -> pass to transcription/NLP
+```
+
+Treat `neu` as neutral. Treat every other IEMOCAP tag as non-neutral:
+
+```text
+ang, hap, exc, sad, fru, fea, sur, dis, xxx, oth
+```
+
+The model should optimize non-neutral recall, not accuracy. It is acceptable to
+process some neutral speech. It is much worse to skip emotional speech.
+
+## Metrics
 
 Primary metric:
 
